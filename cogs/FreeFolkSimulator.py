@@ -6,6 +6,7 @@ class FreeFolkSimulator(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
+
     async def init_master(self,ctx,bot,channel=None):
 
         # Grab the webhooks for that channel
@@ -19,38 +20,15 @@ class FreeFolkSimulator(commands.Cog):
 
         # Get the name of the guild
         guild = str(ctx.guild)
-
-        # Add channel to guild config list if it doesn't exist
-        if channelStr not in self.bot.local_data['guilds'][guild].keys():
-            self.bot.local_data['guilds'][guild][channelStr] = {}
-            print(f"Initialized {channelStr}")
-        else:
-            print(f"Found {channelStr} in data.")
-
+        found = False
         # If the bot is already initialized for this channel:
-        if bot in self.bot.local_data['guilds'][guild][channelStr].keys():
+        for webhook in webhooks:
+            if webhook.name == bot:
+                await ctx.respond(f"{bot} was already active here, it's been deactivated.")
+                await webhook.delete()
+                found = True
 
-            # Grab the URL / ID for the webhook that is stored in the config
-            url = self.bot.local_data['guilds'][guild][channelStr][bot]
-
-            # Parse out the ID
-            id = url.split("webhooks/")[1].split("/")[0]
-
-            # Remove the bot from that channel's keys
-            self.bot.local_data['guilds'][guild][channelStr].pop(bot)
-
-            # Iterate through webhooks in that channel, delete matching one
-            for webhook in webhooks:
-                if webhook.id == id:
-                    webhook.delete()
-
-            # Notify
-            await ctx.respond(f"{bot} was already active here, it's been deactivated.")
-
-            self.bot.save_config()
-
-        else:
-
+        if not found:
             # Gotta check into this, boosting probably changes.
             if len(webhooks) > 9:
                 await ctx.respond("I don't think we can have more than ten webhooks.")
@@ -58,7 +36,7 @@ class FreeFolkSimulator(commands.Cog):
             else:
 
                 # Grab the picture of the bot for the webhook
-                with open(f'pics/{bot}.jpeg','rb') as image:
+                with open(f'pics/bots/{bot}.jpeg','rb') as image:
                     f = image.read()
 
                 # Create a new webhook for the bot in that channel
@@ -67,9 +45,19 @@ class FreeFolkSimulator(commands.Cog):
                 # Record webhook URL
                 self.bot.local_data['guilds'][guild][channelStr][bot] = data.url
 
-                self.bot.save_config()
+                await ctx.respond("Activated!  Trigger words are {}.  Webhook link is {}".format(", ".join(self.bot.bot_data[bot]['keywords']),data.url))
 
-                await ctx.respond("Activated!  Trigger words are {}".format(", ".join(self.bot.bot_data[bot]['keywords'])))
+
+    @slash_command(name='webhook_list', description='List active webhooks.')
+    async def webhook_list(self, ctx):
+        list = []
+        for webhook in await ctx.channel.webhooks():
+            list.append(webhook.name)
+
+        if list:
+            await ctx.respond("\n".join(list))
+        else:
+            await ctx.respond("No active bots in this channel.")
 
 
     @slash_command(name='init_vizzy', description='Activate Vizzy T for a channel.')
