@@ -21,6 +21,12 @@ class FreeFolkSimulator(commands.Cog):
         # Get the name of the guild
         guild = str(ctx.guild)
         found = False
+
+        if not guild in self.bot.local_data['guilds']:
+            self.bot.local_data['guilds'][guild] = {}
+            self.bot.local_data['guilds'][guild][channelStr] = {}
+
+
         # If the bot is already initialized for this channel:
         for webhook in webhooks:
             if webhook.name == bot:
